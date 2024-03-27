@@ -12,80 +12,82 @@
 /* globals $ */
 
 function setup() {
-  const originalAddEventListener = window.addEventListener;
+    const originalAddEventListener = window.addEventListener;
 
-  // 重新定义 window.addEventListener 方法
-  window.addEventListener = function(eventName, listener, options) {
-      if (['pagehide','visibilitychange','blur', 'unload'].includes(eventName)) {
-          return
-      }
-      // 调用原始的 addEventListener 方法
-      return originalAddEventListener.call(window, eventName, listener, options);
-  };
+    // 重新定义 window.addEventListener 方法
+    window.addEventListener = function(eventName, listener, options) {
+        if (['pagehide','visibilitychange','blur', 'unload'].includes(eventName)) {
+            return
+        }
+        // 调用原始的 addEventListener 方法
+        return originalAddEventListener.call(window, eventName, listener, options);
+    };
 
 }
 
 
 function timeToNum(str) {
-  if (str) {
-      str = str.replaceAll(":", "");
-      return parseInt(str);
-  }
-  return 0;
+    if (str) {
+        str = str.replaceAll(":", "");
+        return parseInt(str);
+    }
+    return 0;
 }
 
 (function() {
-  "use strict";
-  setup();
+    "use strict";
+    setup();
 
 
-  function next() {
-      const nextChapter = $(".next-chapter>button")[0];
-      if (nextChapter) {
-          nextChapter.click();
-          init();
-      }
-  }
+    function next() {
+        const nextChapter = $(".next-chapter>button")[0];
+        if (nextChapter) {
+            nextChapter.click();
+            init();
+        }
+    }
 
-  function check() {
-      console.log("--------------------- start ---------------------");
-      const video = $("video")[0];
+    function check() {
+        console.log("--------------------- start ---------------------");
+        const video = $("video")[0];
 
-      if (video) {
-          $(video).prop("muted", true);
-          video.play();
+        if (video) {
+            $(video).prop("muted", true);
+            video.play();
 
-          $(video).on('pause', () => {
-              video.play();
-          })
+            $(video).on('pause', () => {
+                setTimeout(()=> {
+                    video.play();
+                }, 2000)
+            })
 
-          let timer = setInterval(() => {
-              const hint = $(".video-hint");
-              const text = hint.text();
-              const reg = /观看时长应达到 (.*)，当前已观看 (.*)。/;
-              reg.test(text);
-              const targetTime = timeToNum(RegExp.$1) ;
-              const currentTime = timeToNum(RegExp.$2);
-              // console.log(`已播放：${currentTime}, 当前目标时间: ${targetTime}`);
-              if (currentTime >= targetTime) {
-                  console.log("课程结束，进入下一节");
-                  console.log("--------------------- end ---------------------");
-                  clearInterval(timer);
-                  next();
-              }
-          }, 4000);
-      } else {
-          console.log("当前为空白页面，进入下一节");
-          console.log("--------------------- end ---------------------");
-          next();
-      }
-  }
+            let timer = setInterval(() => {
+                const hint = $(".video-hint");
+                const text = hint.text();
+                const reg = /观看时长应达到 (.*)，当前已观看 (.*)。/;
+                reg.test(text);
+                const targetTime = timeToNum(RegExp.$1) ;
+                const currentTime = timeToNum(RegExp.$2);
+                // console.log(`已播放：${currentTime}, 当前目标时间: ${targetTime}`);
+                if (currentTime >= targetTime) {
+                    console.log("课程结束，进入下一节");
+                    console.log("--------------------- end ---------------------");
+                    clearInterval(timer);
+                    next();
+                }
+            }, 4000);
+        } else {
+            console.log("当前为空白页面，进入下一节");
+            console.log("--------------------- end ---------------------");
+            next();
+        }
+    }
 
-  function init() {
-      setTimeout(() => {
-          check();
-      }, 4000);
-  }
+    function init() {
+        setTimeout(() => {
+            check();
+        }, 5000);
+    }
 
-  init();
+    init();
 })();
