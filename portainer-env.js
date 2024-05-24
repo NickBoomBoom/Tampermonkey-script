@@ -41,7 +41,7 @@
     console.log('开始检测')
     setTimeout(() => {
       check();
-    }, 3000);
+    }, 6000);
   }
 
   init();
