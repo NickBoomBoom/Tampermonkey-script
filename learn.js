@@ -61,21 +61,34 @@ function timeToNum(str) {
                 }, 2000)
             })
 
-            let timer = setInterval(() => {
-                const hint = $(".video-hint");
-                const text = hint.text();
-                const reg = /观看时长应达到 (.*)，当前已观看 (.*)。/;
-                reg.test(text);
-                const targetTime = timeToNum(RegExp.$1) ;
-                const currentTime = timeToNum(RegExp.$2);
-                // console.log(`已播放：${currentTime}, 当前目标时间: ${targetTime}`);
-                if (currentTime >= targetTime) {
-                    console.log("课程结束，进入下一节");
-                    console.log("--------------------- end ---------------------");
-                    clearInterval(timer);
-                    next();
-                }
-            }, 4000);
+            
+            let timer = null 
+
+            const handler = () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    const hint = $(".video-hint");
+                    const text = hint.text();
+                    const reg = /观看时长应达到 (.*)，当前已观看 (.*)。/;
+                    reg.test(text);
+                    const targetTime = timeToNum(RegExp.$1) ;
+                    const currentTime = timeToNum(RegExp.$2);
+                    // console.log(`已播放：${currentTime}, 当前目标时间: ${targetTime}`);
+                    if (currentTime >= targetTime) {
+                        console.log("课程结束，进入下一节");
+                        console.log("--------------------- end ---------------------");
+                        clearTimeout(timer);
+                        next();
+                    } else { 
+                        handler()
+                    }
+                }, 4000);
+            }
+
+
+            handler()
+
+          
         } else {
             console.log("当前为空白页面，进入下一节");
             console.log("--------------------- end ---------------------");
