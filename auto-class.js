@@ -52,7 +52,7 @@ function timeToNum(str) {
         const video = $("video")[0];
 
         if (video) {
-            $(video).prop("muted", true);
+            // $(video).prop("muted", true);
             video.play();
 
             $(video).on('pause', () => {
