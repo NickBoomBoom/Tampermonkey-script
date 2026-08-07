@@ -23,453 +23,481 @@
   //    - 原生正则：^/course/\d+/detail$（含正则元字符时按正则处理）
   //    可选位置字段：left/right（水平二选一，默认 right: 20）、top/bottom（垂直二选一，默认 top: 20）
   //    位置值支持数字（160）或字符串（"170px"）
+  //    可选 zIndex 字段：覆盖浮框默认层级（默认 1000），主规则和子规则均可设置
+  //    可选条件子规则 rules：路由命中后监听 DOM 变化（MutationObserver，主线程，
+  //    Web Worker 无法访问 DOM），listen() 返回 true 时切换显示该子规则的
+  //    text/位置，条件消失后恢复主规则；设了 rules 且未设 text 时平时隐藏：
+  //    rules: [{ listen: () => !!document.querySelector(".el-dialog"), text: "提示", top: 8, right: 160 }]
+  //    listen 也可写成字符串（"() => ..."），导入的 JSON 配置以该形式在评估时编译恢复
   // =========================================================================
   const DEFAULT_CONFIG_RULES = [
     {
-      "pattern": "/sd-pc/template/student/testpaper/report",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/template/student/testpaper/report",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/template/unit/report/:courseId/:testPaperId/:classes",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/template/unit/report/:courseId/:testPaperId/:classes",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/stats/students/classes/:classes/:orgId",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/stats/students/classes/:classes/:orgId",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/position/competency/detail/:id",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/position/competency/detail/:id",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/to/industry/map",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/to/industry/map",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/to/job/map",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/to/job/map",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/to/role/permission",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/to/role/permission",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/compute/model/translate",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/compute/model/translate",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/compute/model/download",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/compute/model/download",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/stats/students/:classes/:orgId/:userId",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/stats/students/:classes/:orgId/:userId",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/warning/detail/:teacherId",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/warning/detail/:teacherId",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/compute/cluster/:id",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/compute/cluster/:id",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/template/loading",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/template/loading",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/maps",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/course/maps",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/agents/chat",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/agents/chat",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/to/user",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/to/user",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/to/route",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/to/route",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/to/account",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/to/account",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/to/keyword",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/to/keyword",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/to/log",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/to/log",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/position/competency",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/position/competency",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/tools/produce",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/tools/produce",
+      text: "晶程甲宇科技(上海)有限公司 Low Code Tool V1.0",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/tools/teaching",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/tools/teaching",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
+      rules: [
+        {
+          listen: () => {
+            const el = Array.from(document.querySelectorAll("iframe"));
+            if (el.length) {
+              return el.some((t) =>
+                (t.getAttribute("src") || "").includes(
+                  "tiusolution.com/agents/dashboard/lesson-plan",
+                ),
+              );
+            }
+            return false;
+          },
+          zIndex: 9999,
+          text: "晶程甲宇科技(上海)有限公司 Low Code Tool V1.0",
+          top: "40px",
+          right: "440px",
+        },
+      ],
     },
     {
-      "pattern": "/sd-pc/tools/working",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/tools/working",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/work/order",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/work/order",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/training-room/devices",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/training-room/devices",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/stats/student",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/stats/student",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/stats/students",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/stats/students",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/accounts/preference",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/accounts/preference",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/system/features",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/system/features",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/compute/cluster",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/compute/cluster",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/compute/vm",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/compute/vm",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/feedback/teacher/:bindingId/:classes",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/course/:courseId/feedback/teacher/:bindingId/:classes",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/feedback/student/:bindingId",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/course/:courseId/feedback/student/:bindingId",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/testpaper/:testPaperId/teaching/:classes?",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern:
+        "/sd-pc/course/:courseId/testpaper/:testPaperId/teaching/:classes?",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/testpaper/:testPaperId/report/:classes?",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern:
+        "/sd-pc/course/:courseId/testpaper/:testPaperId/report/:classes?",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/testpaper/:testPaperId/correct/:classes?",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern:
+        "/sd-pc/course/:courseId/testpaper/:testPaperId/correct/:classes?",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/testpaper/:testPaperId/study",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/course/:courseId/testpaper/:testPaperId/study",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/dashboard",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/course/:courseId/dashboard",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/sub",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/course/:courseId/sub",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/map",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/course/:courseId/map",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId/data",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "8px",
-      "right": "170px"
+      pattern: "/sd-pc/course/:courseId/data",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "8px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/report/:courseId/:testPaperId/:classes?",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/report/:courseId/:testPaperId/:classes?",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/correct/:courseId/:testPaperId/:classes?",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/correct/:courseId/:testPaperId/:classes?",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/iframe/:url/:title",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/iframe/:url/:title",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/course/:courseId",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/course/:courseId",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/organization/:id",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/organization/:id",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/industry-map/:configIndex",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/industry-map/:configIndex",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/major-map/:id",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/major-map/:id",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/refresh/:fullPath?",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/refresh/:fullPath?",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/login/:code?",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/login/:code?",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/convert",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/convert",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/test",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/test",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/401",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/401",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/dashboard",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/dashboard",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/resource",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/resource",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/cloud-disk",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/cloud-disk",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/agents",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/agents",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/knowledge",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/knowledge",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/training-room",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/training-room",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/organization",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/organization",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/roles",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/roles",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/warning",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/warning",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/honors",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/honors",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/accounts",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/accounts",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/web-tools",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/web-tools",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/prompt",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/prompt",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/py-problems",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/py-problems",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/logs",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/logs",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/industry-map",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/industry-map",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/major-map",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/major-map",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
+      pattern: "/sd-pc/",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
     },
     {
-      "pattern": "/sd-pc/:pathMatch(.*)*",
-      "text": "晶程甲宇科技(上海)有限公司",
-      "top": "12px",
-      "right": "170px"
-    }
-  ]
+      pattern: "/sd-pc/:pathMatch(.*)*",
+      text: "晶程甲宇科技(上海)有限公司",
+      top: "12px",
+      right: "170px",
+    },
+  ];
   const STORAGE_KEY = "PAGE_ROUTE_FLOATING_TEXT_MAP_V3";
   // v3.3 及之前版本使用的旧 key（Vue 命名），仅用于数据迁移
   const LEGACY_STORAGE_KEY = "VUE_ROUTE_FLOATING_TEXT_MAP_V3";
@@ -480,6 +508,9 @@
 
   // 悬浮框默认位置：距视口右缘/上缘的像素值
   const DEFAULT_MARGIN = 20;
+
+  // 悬浮框默认层级，规则可通过 zIndex 字段覆盖
+  const DEFAULT_Z_INDEX = "1000";
 
   // =========================================================================
   // 2. 存储与数据初始化
@@ -522,7 +553,11 @@
   function getDefaultRulesMap() {
     const map = {};
     DEFAULT_CONFIG_RULES.forEach(function (rule) {
-      const entry = { text: rule.text || "未命名页面" };
+      // 设了 rules 且未设 text 的规则平时隐藏，仅子规则触发时显示
+      const entry = { text: rule.text || (rule.rules ? null : "未命名页面") };
+      // 条件子规则原样透传（含 listen 函数，无法 JSON 序列化，仅存于预设）
+      if (Array.isArray(rule.rules)) entry.rules = rule.rules;
+      if (rule.zIndex !== undefined) entry.zIndex = rule.zIndex;
       // 位置：水平 left/right、垂直 top/bottom 各取其一（right/bottom 优先），
       // 未指定时默认贴右上角
       const left = parsePosValue(rule.left);
@@ -543,16 +578,45 @@
     return map;
   }
 
-  // 生效规则 = 预设默认 + 用户存储的覆盖/新增
+  // 生效规则 = 预设默认 + 用户存储的覆盖/新增。
+  // 同 pattern 按字段合并：存储项只覆盖它保存的字段（文案/位置/样式）。
+  // 存储项中的 rules：每条都带 listen（字符串或函数）才视为有效覆盖（如导入的配置），
+  // 否则是旧版本污染产生的残壳，丢弃并以预设为准
   function getEffectiveRulesMap() {
-    return Object.assign(getDefaultRulesMap(), getStoredData());
+    const map = getDefaultRulesMap();
+    const stored = getStoredData();
+    Object.keys(stored).forEach(function (pattern) {
+      if (!map[pattern]) {
+        map[pattern] = stored[pattern];
+        return;
+      }
+      const override = Object.assign({}, stored[pattern]);
+      if (Array.isArray(override.rules)) {
+        const usable =
+          override.rules.length > 0 &&
+          override.rules.every(function (s) {
+            return (
+              s &&
+              (typeof s.listen === "string" || typeof s.listen === "function")
+            );
+          });
+        if (!usable) delete override.rules;
+      }
+      map[pattern] = Object.assign({}, map[pattern], override);
+    });
+    return map;
   }
 
-  // 确保 storage 中存在该规则的覆盖项：预设规则首次被修改时，以其当前生效值为底
+  // 确保 storage 中存在该规则的覆盖项：预设规则首次被修改时，以其当前生效值为底。
+  // 注意剔除 rules：listen 函数无法 JSON 序列化，落库后会反过来覆盖预设中的 rules
   function ensureStoredEntry(stored, pattern) {
     if (!stored[pattern]) {
       const effective = getDefaultRulesMap()[pattern];
-      if (effective) stored[pattern] = Object.assign({}, effective);
+      if (effective) {
+        const copy = Object.assign({}, effective);
+        delete copy.rules;
+        stored[pattern] = copy;
+      }
     }
     return stored[pattern];
   }
@@ -610,6 +674,8 @@
     bgColorInput,
     bgTransparentCheckbox;
   let activePattern = null;
+  let activeRule = null; // 当前命中的规则（含子规则）
+  let activeSubRule = null; // 当前触发中的条件子规则
   let isEditMode = false;
 
   // 样式配置默认值；bgColor 为空字符串表示透明背景
@@ -622,7 +688,7 @@
 
     Object.assign(container.style, {
       position: "fixed",
-      zIndex: "1000",
+      zIndex: DEFAULT_Z_INDEX,
       padding: "4px",
       backgroundColor: "transparent",
       color: "#000000",
@@ -665,7 +731,7 @@
       outline: "none",
       color: "#000000",
       fontSize: "16px",
-      fontWeight: 'bold',
+      fontWeight: "bold",
       fontFamily: "inherit",
       width: "140px",
       flexGrow: "1",
@@ -806,6 +872,8 @@
     dragHandle.style.display = "inline-flex";
     configRow.style.display = "flex";
     textInput.value = textSpan.innerText;
+    // 输入框宽度跟随文字实际渲染宽度（最小 140px），避免长文字在输入框内被截断
+    textInput.style.width = Math.max(140, textSpan.offsetWidth + 24) + "px";
     textSpan.style.display = "none";
     textInput.style.display = "inline-block";
 
@@ -818,6 +886,8 @@
 
     const currentPath = getCurrentPath();
     const matchedRule = findMatchedRule(currentPath);
+    activeRule = matchedRule;
+    activeSubRule = null;
 
     if (matchedRule) {
       activePattern = matchedRule.pattern;
@@ -827,14 +897,88 @@
         typeof matchedRule.bgColor === "string"
           ? matchedRule.bgColor
           : DEFAULT_STYLE.bgColor;
-      textSpan.innerText = matchedRule.text;
-      applyPosition(matchedRule);
-      container.style.display = "flex";
-      switchToDisplayMode();
+      renderRule(matchedRule);
+
+      // 含条件子规则：启动 DOM 监听并立即评估一次；否则停止监听
+      if (Array.isArray(matchedRule.rules) && matchedRule.rules.length) {
+        startDomListener();
+        evaluateSubRules();
+      } else {
+        stopDomListener();
+      }
     } else {
       activePattern = null;
+      stopDomListener();
       container.style.display = "none";
     }
+  }
+
+  // 渲染规则/子规则到浮框；text 为空时隐藏
+  function renderRule(rule) {
+    if (!rule.text) {
+      container.style.display = "none";
+      return;
+    }
+    textSpan.innerText = rule.text;
+    container.style.zIndex =
+      rule.zIndex !== undefined ? String(rule.zIndex) : DEFAULT_Z_INDEX;
+    applyPosition(rule);
+    container.style.display = "flex";
+    switchToDisplayMode();
+  }
+
+  // listen 字符串编译（带缓存）：导入的 JSON 配置中 listen 以字符串书写
+  // （如 "() => !!document.querySelector('.x')"），评估时编译为函数
+  const listenFnCache = {};
+
+  function compileListen(code) {
+    if (code in listenFnCache) return listenFnCache[code];
+    let fn = null;
+    try {
+      const compiled = new Function("return (" + code + ");")();
+      if (typeof compiled === "function") {
+        fn = compiled;
+      } else {
+        console.error("[FloatingText] listen 编译结果不是函数: " + code);
+      }
+    } catch (e) {
+      console.error("[FloatingText] listen 编译失败: " + code, e);
+    }
+    listenFnCache[code] = fn;
+    return fn;
+  }
+
+  // 评估当前规则的条件子规则：第一个 listen() 为真的子规则切换显示，
+  // 都不为真则恢复主规则；仅在触发状态变化时重渲染
+  function evaluateSubRules() {
+    if (isEditMode || !activeRule) return;
+
+    const subs = activeRule.rules || [];
+    let hit = null;
+    for (let i = 0; i < subs.length; i++) {
+      // listen 支持函数（预设）或字符串（导入的配置，编译后缓存）；
+      // 跳过没有合法 listen 的畸形子规则
+      let listen = subs[i] && subs[i].listen;
+      if (typeof listen === "string") listen = compileListen(listen);
+      if (typeof listen !== "function") continue;
+      let ok = false;
+      try {
+        ok = !!listen();
+      } catch (e) {
+        console.error(
+          "[FloatingText] 子规则 listen 执行错误: " + activeRule.pattern,
+          e,
+        );
+      }
+      if (ok) {
+        hit = subs[i];
+        break;
+      }
+    }
+
+    if (hit === activeSubRule) return;
+    activeSubRule = hit;
+    renderRule(hit || activeRule);
   }
 
   // 应用规则中的位置：left/right、top/bottom 各取其一（right/bottom 优先），
@@ -886,7 +1030,12 @@
     const newText = textInput.value.trim();
     if (newText) {
       textSpan.innerText = newText;
+    }
+    // 先切回展示态再保存位置：编辑态容器包含拖拽手柄/加宽输入框/配置行，
+    // 用它的宽高算出的位置（尤其 right/bottom 锚定）套到展示态文字框上会对不上
+    switchToDisplayMode();
 
+    if (newText) {
       const stored = getStoredData();
       const rule = ensureStoredEntry(stored, activePattern);
       if (rule) {
@@ -895,7 +1044,6 @@
         saveStoredData(stored);
       }
     }
-    switchToDisplayMode();
   }
 
   // =========================================================================
@@ -1039,10 +1187,10 @@
     if (existing) {
       alert(
         "当前页面已存在悬浮文本：\n\n规则: " +
-          existing.pattern +
-          "\n文案: " +
-          existing.text +
-          "\n\n可直接双击悬浮文字修改，或通过油猴菜单重置后重新添加。",
+        existing.pattern +
+        "\n文案: " +
+        existing.text +
+        "\n\n可直接双击悬浮文字修改，或通过油猴菜单重置后重新添加。",
       );
       return;
     }
@@ -1086,12 +1234,98 @@
     updateDisplay();
   }
 
+  // 导出当前站点的全量生效配置（预设 + storage 覆盖合并后）为 JSON 文件。
+  // rules 中的 listen 函数序列化为源码字符串，导入时由 compileListen 编译恢复
+  function exportConfig() {
+    const map = getEffectiveRulesMap();
+    const data = {};
+    Object.keys(map).forEach(function (pattern) {
+      const entry = Object.assign({}, map[pattern]);
+      if (Array.isArray(entry.rules)) {
+        entry.rules = entry.rules.map(function (sub) {
+          const copy = Object.assign({}, sub);
+          if (typeof copy.listen === "function") {
+            copy.listen = copy.listen.toString();
+          }
+          return copy;
+        });
+      }
+      data[pattern] = entry;
+    });
+    if (!Object.keys(data).length) {
+      alert("当前站点没有可导出的配置。");
+      return;
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      "floating-text-config-" +
+      location.host.replace(/[^\w.-]+/g, "_") +
+      ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // 从 JSON 文件导入配置，与当前站点 storage 合并（同 pattern 覆盖）。
+  // 兼容 rules：listen 以字符串书写（如 "() => !!document.querySelector('.x')"），
+  // 评估时由 compileListen 编译为函数
+  function importConfig() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.addEventListener("change", function () {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function () {
+        let data;
+        try {
+          data = JSON.parse(String(reader.result));
+        } catch (e) {
+          alert("导入失败：文件不是有效的 JSON。");
+          return;
+        }
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
+          alert("导入失败：JSON 顶层应为规则对象（pattern -> 配置）。");
+          return;
+        }
+        if (
+          !confirm(
+            "确定导入 " +
+            Object.keys(data).length +
+            " 条规则吗？\n将与当前站点现有配置合并，同 pattern 会被覆盖。",
+          )
+        ) {
+          return;
+        }
+        const stored = getStoredData();
+        Object.keys(data).forEach(function (pattern) {
+          if (!data[pattern] || typeof data[pattern] !== "object") return;
+          stored[pattern] = Object.assign({}, stored[pattern], data[pattern]);
+        });
+        saveStoredData(stored);
+        updateDisplay();
+        alert("导入完成，共 " + Object.keys(data).length + " 条规则。");
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  }
+
   function registerMenuCommands() {
     if (typeof GM_registerMenuCommand === "function") {
       GM_registerMenuCommand(
         "给当前页面添加悬浮文本",
         addFloatingTextForCurrentPage,
       );
+      GM_registerMenuCommand("导出当前站点悬浮文本配置", exportConfig);
+      GM_registerMenuCommand("导入悬浮文本配置（JSON）", importConfig);
       GM_registerMenuCommand("清空本站点悬浮文本数据（重置）", resetStoredData);
     }
   }
@@ -1099,6 +1333,35 @@
   // =========================================================================
   // 6. SPA 路由拦截监听与启动
   // =========================================================================
+  // DOM 变化监听：驱动条件子规则的显隐。
+  // 注意：Web Worker 无法访问 DOM（无 document/MutationObserver），只能在主线程监听
+  let domObserver = null;
+  let evalScheduled = false;
+
+  function startDomListener() {
+    if (domObserver) return;
+    domObserver = new MutationObserver(function () {
+      // 高频 mutation 合并为防抖评估，避免监听函数被频繁执行
+      if (evalScheduled) return;
+      evalScheduled = true;
+      setTimeout(function () {
+        evalScheduled = false;
+        evaluateSubRules();
+      }, 100);
+    });
+    domObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+  }
+
+  function stopDomListener() {
+    if (!domObserver) return;
+    domObserver.disconnect();
+    domObserver = null;
+  }
+
   function listenSPAUrlChange() {
     const originalPushState = history.pushState;
     const originalReplaceState = history.replaceState;
