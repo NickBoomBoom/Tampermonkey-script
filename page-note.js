@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         页面路由悬浮文本管理器
 // @namespace    http://tampermonkey.net/
-// @version      3.5
-// @description  SPA 路由感知悬浮文字，支持预设/自定义正则匹配，双击编辑拖拽并可配置字号/文字/背景色，失焦恢复，LocalStorage 存储；可通过快捷键 Ctrl+Alt+F 或油猴脚本菜单为当前页面添加悬浮文本。
+// @version      3.6
+// @description  SPA 路由感知悬浮文字，支持预设/自定义正则匹配，双击编辑拖拽并可配置字号/文字/背景色，确定/取消按钮退出编辑，LocalStorage 存储；可通过快捷键 Ctrl+Alt+F 或油猴脚本菜单为当前页面添加悬浮文本。
 // @author       You
 // @match        *://*/*
 // @grant        GM_registerMenuCommand
@@ -22,11 +22,12 @@
   //    - Vue Router 路径语法：/report/:courseId/:classes（:param 匹配单个路径段）
   //    - 原生正则：^/course/\d+/detail$（含正则元字符时按正则处理）
   //    可选位置字段：left/right（水平二选一，默认 right: 20）、top/bottom（垂直二选一，默认 top: 20）
-  //    位置值支持数字（160）或字符串（"170px"）
+  //    位置值支持数字（160）或字符串（"260px"）
   //    可选 zIndex 字段：覆盖浮框默认层级（默认 1000），主规则和子规则均可设置
   //    可选条件子规则 rules：路由命中后监听 DOM 变化（MutationObserver，主线程，
-  //    Web Worker 无法访问 DOM），listen() 返回 true 时切换显示该子规则的
-  //    text/位置，条件消失后恢复主规则；设了 rules 且未设 text 时平时隐藏：
+  //    Web Worker 无法访问 DOM），每个子规则独立评估，listen() 为真时在独立浮框
+  //    （page-route-floating-box-sub-N）中显示其 text/位置，多个子规则可同时触发，
+  //    条件消失即隐藏；主规则未设 text 时主浮框平时隐藏：
   //    rules: [{ listen: () => !!document.querySelector(".el-dialog"), text: "提示", top: 8, right: 160 }]
   //    listen 也可写成字符串（"() => ..."），导入的 JSON 配置以该形式在评估时编译恢复
   // =========================================================================
@@ -34,140 +35,140 @@
     {
       pattern: "/sd-pc/template/student/testpaper/report",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/template/unit/report/:courseId/:testPaperId/:classes",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/stats/students/classes/:classes/:orgId",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/position/competency/detail/:id",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/to/industry/map",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/to/job/map",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/to/role/permission",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/compute/model/translate",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/compute/model/download",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/stats/students/:classes/:orgId/:userId",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/warning/detail/:teacherId",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/compute/cluster/:id",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/template/loading",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/course/maps",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/agents/chat",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/to/user",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/to/route",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/to/account",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/to/keyword",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/to/log",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/position/competency",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/tools/produce",
       text: "晶程甲宇科技(上海)有限公司 Low Code Tool V1.0",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/tools/teaching",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
       rules: [
         {
           listen: () => {
@@ -191,311 +192,311 @@
     {
       pattern: "/sd-pc/tools/working",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/work/order",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/training-room/devices",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/stats/student",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/stats/students",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/accounts/preference",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/system/features",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/compute/cluster",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/compute/vm",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/course/:courseId/feedback/teacher/:bindingId/:classes",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/course/:courseId/feedback/student/:bindingId",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern:
         "/sd-pc/course/:courseId/testpaper/:testPaperId/teaching/:classes?",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern:
         "/sd-pc/course/:courseId/testpaper/:testPaperId/report/:classes?",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern:
         "/sd-pc/course/:courseId/testpaper/:testPaperId/correct/:classes?",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/course/:courseId/testpaper/:testPaperId/study",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/course/:courseId/dashboard",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/course/:courseId/sub",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/course/:courseId/map",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/course/:courseId/data",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "8px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/report/:courseId/:testPaperId/:classes?",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/correct/:courseId/:testPaperId/:classes?",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/iframe/:url/:title",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/course/:courseId",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/organization/:id",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/industry-map/:configIndex",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/major-map/:id",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/refresh/:fullPath?",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/login/:code?",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/convert",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/test",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/401",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/dashboard",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/resource",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/cloud-disk",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/agents",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/knowledge",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/training-room",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/organization",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/roles",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/warning",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/honors",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/accounts",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/web-tools",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/prompt",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/py-problems",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/logs",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/industry-map",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/major-map",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
     {
       pattern: "/sd-pc/:pathMatch(.*)*",
       text: "晶程甲宇科技(上海)有限公司",
-      top: "12px",
-      right: "170px",
+      top: "14px",
+      right: "260px",
     },
   ];
   const STORAGE_KEY = "PAGE_ROUTE_FLOATING_TEXT_MAP_V3";
@@ -537,7 +538,7 @@
     localStorage.removeItem(LEGACY_STORAGE_KEY);
   }
 
-  // 位置值解析：支持数字（160）或字符串（"170px"/"160"），非法值返回 undefined
+  // 位置值解析：支持数字（160）或字符串（"260px"/"160"），非法值返回 undefined
   function parsePosValue(v) {
     if (typeof v === "number") return v;
     if (typeof v === "string" && v.trim() !== "") {
@@ -673,10 +674,13 @@
     fontColorInput,
     bgColorInput,
     bgTransparentCheckbox;
+  let btnRow, confirmBtn, cancelBtn;
   let activePattern = null;
   let activeRule = null; // 当前命中的规则（含子规则）
-  let activeSubRule = null; // 当前触发中的条件子规则
   let isEditMode = false;
+  // 进入编辑态时的 storage 快照：undefined=非编辑态，null=原无覆盖项；
+  // 取消编辑时用它撤销本次编辑期间的所有改动（文案/位置/样式）
+  let editSnapshot;
 
   // 样式配置默认值；bgColor 为空字符串表示透明背景
   const DEFAULT_STYLE = { fontSize: 16, color: "#000000", bgColor: "" };
@@ -754,9 +758,9 @@
     Object.assign(configRow.style, {
       display: "none",
       alignItems: "center",
-      gap: "12px",
+      gap: "14px",
       marginTop: "6px",
-      fontSize: "12px",
+      fontSize: "14px",
       color: "black",
       whiteSpace: "nowrap",
     });
@@ -803,8 +807,40 @@
     configRow.appendChild(buildConfigLabel("背景", bgColorInput));
     configRow.appendChild(buildConfigLabel("透明", bgTransparentCheckbox));
 
+    // 底部操作按钮：确定/取消，仅编辑态显示（编辑态不再以失焦退出）
+    btnRow = document.createElement("div");
+    Object.assign(btnRow.style, {
+      display: "none",
+      alignSelf: "stretch",
+      justifyContent: "flex-end",
+      gap: "14px",
+      marginTop: "6px",
+    });
+
+    confirmBtn = document.createElement("button");
+    confirmBtn.textContent = "确定";
+    cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "取消";
+    [confirmBtn, cancelBtn].forEach(function (btn) {
+      Object.assign(btn.style, {
+        fontSize: "14px",
+        padding: "2px 14px",
+        cursor: "pointer",
+        borderRadius: "4px",
+        border: "1px solid rgba(0, 0, 0, 0.35)",
+        background: "transparent",
+        color: "#000000",
+      });
+    });
+    confirmBtn.style.borderColor = "#3b82f6";
+    confirmBtn.style.color = "#3b82f6";
+
+    btnRow.appendChild(confirmBtn);
+    btnRow.appendChild(cancelBtn);
+
     container.appendChild(topRow);
     container.appendChild(configRow);
+    container.appendChild(btnRow);
     document.body.appendChild(container);
 
     bindEvents();
@@ -852,6 +888,7 @@
 
     dragHandle.style.display = "none";
     configRow.style.display = "none";
+    btnRow.style.display = "none";
     textSpan.style.display = "inline";
     textInput.style.display = "none";
   }
@@ -869,8 +906,15 @@
     bgColorInput.disabled = !currentStyle.bgColor;
     bgTransparentCheckbox.checked = !currentStyle.bgColor;
 
+    // 记录进入编辑前的 storage 快照，供取消时撤销本次改动
+    const stored = getStoredData();
+    editSnapshot = stored[activePattern]
+      ? JSON.parse(JSON.stringify(stored[activePattern]))
+      : null;
+
     dragHandle.style.display = "inline-flex";
     configRow.style.display = "flex";
+    btnRow.style.display = "flex";
     textInput.value = textSpan.innerText;
     // 输入框宽度跟随文字实际渲染宽度（最小 140px），避免长文字在输入框内被截断
     textInput.style.width = Math.max(140, textSpan.offsetWidth + 24) + "px";
@@ -887,7 +931,8 @@
     const currentPath = getCurrentPath();
     const matchedRule = findMatchedRule(currentPath);
     activeRule = matchedRule;
-    activeSubRule = null;
+    // 路由变化后先隐藏所有子规则浮框，再由 evaluateSubRules 按需重新显示
+    hideAllSubRuleBoxes();
 
     if (matchedRule) {
       activePattern = matchedRule.pattern;
@@ -948,19 +993,51 @@
     return fn;
   }
 
-  // 评估当前规则的条件子规则：第一个 listen() 为真的子规则切换显示，
-  // 都不为真则恢复主规则；仅在触发状态变化时重渲染
+  // 子规则浮框缓存：key 为子规则对象（预设中的引用稳定）。
+  // 子规则触发时显示在独立浮框中，与主浮框互不影响
+  const subRuleBoxes = new Map();
+
+  function createSubRuleBox(sub, index) {
+    let box = subRuleBoxes.get(sub);
+    if (box) return box;
+    box = document.createElement("div");
+    box.id = "page-route-floating-box-sub-" + index;
+    Object.assign(box.style, {
+      position: "fixed",
+      zIndex: DEFAULT_Z_INDEX,
+      padding: "4px",
+      backgroundColor: "transparent",
+      color: "#000000",
+      fontSize: "16px",
+      fontFamily:
+        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      userSelect: "none",
+      display: "none",
+    });
+    document.body.appendChild(box);
+    subRuleBoxes.set(sub, box);
+    return box;
+  }
+
+  function hideAllSubRuleBoxes() {
+    subRuleBoxes.forEach(function (box) {
+      box.style.display = "none";
+    });
+  }
+
+  // 评估当前规则的条件子规则：每个子规则独立评估，listen() 为真时
+  // 在独立浮框中显示其 text/位置（多个子规则可同时触发），为假时隐藏对应浮框
   function evaluateSubRules() {
     if (isEditMode || !activeRule) return;
 
     const subs = activeRule.rules || [];
-    let hit = null;
-    for (let i = 0; i < subs.length; i++) {
+    subs.forEach(function (sub, i) {
       // listen 支持函数（预设）或字符串（导入的配置，编译后缓存）；
       // 跳过没有合法 listen 的畸形子规则
-      let listen = subs[i] && subs[i].listen;
+      let listen = sub && sub.listen;
       if (typeof listen === "string") listen = compileListen(listen);
-      if (typeof listen !== "function") continue;
+      if (typeof listen !== "function") return;
+
       let ok = false;
       try {
         ok = !!listen();
@@ -970,20 +1047,29 @@
           e,
         );
       }
-      if (ok) {
-        hit = subs[i];
-        break;
-      }
-    }
 
-    if (hit === activeSubRule) return;
-    activeSubRule = hit;
-    renderRule(hit || activeRule);
+      if (ok) {
+        const box = createSubRuleBox(sub, i);
+        box.textContent = sub.text || "";
+        box.style.zIndex =
+          sub.zIndex !== undefined ? String(sub.zIndex) : DEFAULT_Z_INDEX;
+        applyPositionTo(box, sub);
+        box.style.display = "block";
+      } else {
+        const box = subRuleBoxes.get(sub);
+        if (box) box.style.display = "none";
+      }
+    });
   }
 
   // 应用规则中的位置：left/right、top/bottom 各取其一（right/bottom 优先），
   // 缺省维度置 auto；某维度两个字段都没有（如旧版 x/y 存储项）时按默认边距贴右上角
   function applyPosition(rule) {
+    applyPositionTo(container, rule);
+  }
+
+  // applyPosition 的通用版：作用于指定元素（主浮框/子规则浮框共用）
+  function applyPositionTo(el, rule) {
     let left = parsePosValue(rule.left);
     let right = parsePosValue(rule.right);
     let top = parsePosValue(rule.top);
@@ -992,10 +1078,10 @@
     if (top !== undefined && bottom !== undefined) top = undefined; // bottom 优先
     if (left === undefined && right === undefined) right = DEFAULT_MARGIN;
     if (top === undefined && bottom === undefined) top = DEFAULT_MARGIN;
-    container.style.left = left !== undefined ? left + "px" : "auto";
-    container.style.right = right !== undefined ? right + "px" : "auto";
-    container.style.top = top !== undefined ? top + "px" : "auto";
-    container.style.bottom = bottom !== undefined ? bottom + "px" : "auto";
+    el.style.left = left !== undefined ? left + "px" : "auto";
+    el.style.right = right !== undefined ? right + "px" : "auto";
+    el.style.top = top !== undefined ? top + "px" : "auto";
+    el.style.bottom = bottom !== undefined ? bottom + "px" : "auto";
   }
 
   // 保存浮框位置：保持规则原有的锚定方向（right/bottom 锚定的随窗口尺寸自适应）
@@ -1027,6 +1113,7 @@
   function saveAndExitEditMode() {
     if (!isEditMode || !activePattern) return;
 
+    editSnapshot = undefined; // 提交本次编辑，丢弃快照
     const newText = textInput.value.trim();
     if (newText) {
       textSpan.innerText = newText;
@@ -1046,6 +1133,23 @@
     }
   }
 
+  // 取消编辑：恢复进入编辑前的快照，撤销本次编辑期间的文案/位置/样式改动
+  function cancelEditMode() {
+    if (!isEditMode) return;
+
+    const stored = getStoredData();
+    if (editSnapshot === null) {
+      delete stored[activePattern];
+    } else if (editSnapshot) {
+      stored[activePattern] = editSnapshot;
+    }
+    saveStoredData(stored);
+    editSnapshot = undefined;
+
+    isEditMode = false;
+    updateDisplay(); // 按恢复后的生效规则重渲染，文案/位置/样式一并还原
+  }
+
   // =========================================================================
   // 4. 事件绑定
   // =========================================================================
@@ -1057,20 +1161,22 @@
       }
     });
 
-    textInput.addEventListener("blur", function () {
-      // 焦点转移到浮框内其他控件（样式配置项）时不退出编辑态
-      setTimeout(function () {
-        if (container.contains(document.activeElement)) return;
-        saveAndExitEditMode();
-      }, 0);
-    });
-
-    textInput.addEventListener("keydown", function (e) {
+    // 编辑态不再以失焦退出：仅通过确定/取消按钮或 Enter/Esc 结束编辑
+    // （按钮上不拦截，由按钮自身的 click 响应，避免重复触发）
+    container.addEventListener("keydown", function (e) {
+      if (!isEditMode) return;
+      if (e.target.tagName === "BUTTON") return;
       if (e.key === "Enter") {
         e.preventDefault();
-        textInput.blur();
+        saveAndExitEditMode();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        cancelEditMode();
       }
     });
+
+    confirmBtn.addEventListener("click", saveAndExitEditMode);
+    cancelBtn.addEventListener("click", cancelEditMode);
 
     // 点击配置行的标签/空白区域时保持当前焦点，避免误退出编辑态
     configRow.addEventListener("mousedown", function (e) {
