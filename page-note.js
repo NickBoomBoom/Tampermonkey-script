@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         页面路由悬浮文本管理器
 // @namespace    http://tampermonkey.net/
-// @version      3.7
+// @version      3.8
 // @description  SPA 路由感知悬浮文字，支持预设/自定义正则匹配，双击编辑拖拽并可配置字号/文字/背景色，确定/取消按钮退出编辑，LocalStorage 存储；可通过快捷键 Ctrl+Alt+F 或油猴脚本菜单为当前页面添加悬浮文本。
 // @author       You
 // @match        *://*/*
@@ -31,6 +31,8 @@
   //    条件消失即隐藏；主规则未设 text 时主浮框平时隐藏：
   //    rules: [{ listen: () => !!document.querySelector(".el-dialog"), text: "提示", top: 8, right: 160 }]
   //    listen 也可写成字符串（"() => ..."），导入的 JSON 配置以该形式在评估时编译恢复
+  //    子规则浮框与主浮框一致支持双击编辑：文案/拖拽位置/字号/文字色/背景色，
+  //    确定（Enter）保存（listen 序列化后随整条 rules 落库覆盖预设）、取消（Esc）还原
   // =========================================================================
   const DEFAULT_CONFIG_RULES = [
     {
@@ -184,7 +186,7 @@
             return false;
           },
           zIndex: 9999,
-          text: "晶程甲宇科技(上海)有限公司 Low Code Tool V1.0",
+          text: "晶程甲宇科技(上海)有限公司 LessonGen Agent V1.0",
           top: "40px",
           right: "440px",
         },
@@ -998,26 +1000,366 @@
   // 子规则触发时显示在独立浮框中，与主浮框互不影响
   const subRuleBoxes = new Map();
 
+  // 子浮框编辑状态：同一时间只编辑一个子浮框；subDrag 为拖拽中的会话
+  let subEdit = null; // { box, sub, index, ui }
+  let subDrag = null; // { box, startX, startY, initialLeft, initialTop }
+
   function createSubRuleBox(sub, index) {
     let box = subRuleBoxes.get(sub);
     if (box) return box;
     box = document.createElement("div");
     box.id = "page-route-floating-box-sub-" + index;
+    // storage 覆盖后子规则对象换新会重建浮框，移除同 id 的旧隐藏浮框避免 id 重复
+    const stale = document.getElementById(box.id);
+    if (stale) stale.remove();
     Object.assign(box.style, {
       position: "fixed",
       zIndex: DEFAULT_Z_INDEX,
       padding: "4px",
       backgroundColor: "transparent",
       color: "#000000",
+      borderRadius: "6px",
       fontSize: "16px",
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       userSelect: "none",
+      border: "1px solid transparent",
       display: "none",
+      flexDirection: "column",
+      alignItems: "center",
+      transition: "border-color 0.2s, background-color 0.2s",
     });
+
+    // 控件结构与主浮框一致：拖拽手柄 + 文字/输入框 + 样式配置行 + 确定/取消按钮，
+    // 展示态只显示文字，其余控件仅编辑态显示；引用挂在 box._ui 上
+    const ui = {};
+
+    ui.dragHandle = document.createElement("span");
+    ui.dragHandle.title = "按住拖拽移动位置";
+    ui.dragHandle.innerHTML =
+      '<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="12" r="1.2"/><circle cx="7" cy="12" r="1.2"/></svg>';
+    Object.assign(ui.dragHandle.style, {
+      display: "none",
+      cursor: "move",
+      marginRight: "6px",
+      lineHeight: "0",
+      flexShrink: "0",
+      color: "#000000",
+    });
+
+    ui.textSpan = document.createElement("span");
+    ui.textSpan.title = "双击进入编辑/拖拽模式";
+    ui.textSpan.style.cursor = "default";
+
+    ui.textInput = document.createElement("input");
+    ui.textInput.type = "text";
+    Object.assign(ui.textInput.style, {
+      display: "none",
+      background: "transparent",
+      border: "none",
+      outline: "none",
+      color: "#000000",
+      fontSize: "16px",
+      fontWeight: "bold",
+      fontFamily: "inherit",
+      width: "140px",
+      flexGrow: "1",
+      padding: "0",
+    });
+
+    const topRow = document.createElement("div");
+    Object.assign(topRow.style, {
+      display: "flex",
+      alignItems: "center",
+      alignSelf: "stretch",
+    });
+    topRow.appendChild(ui.dragHandle);
+    topRow.appendChild(ui.textSpan);
+    topRow.appendChild(ui.textInput);
+
+    ui.configRow = document.createElement("div");
+    Object.assign(ui.configRow.style, {
+      display: "none",
+      alignItems: "center",
+      gap: "14px",
+      marginTop: "6px",
+      fontSize: "14px",
+      color: "black",
+      whiteSpace: "nowrap",
+    });
+
+    ui.fontSizeInput = document.createElement("input");
+    ui.fontSizeInput.type = "number";
+    ui.fontSizeInput.min = "10";
+    ui.fontSizeInput.max = "48";
+    ui.fontSizeInput.step = "1";
+    ui.fontSizeInput.title = "字体大小(px)";
+    ui.fontSizeInput.style.width = "42px";
+
+    ui.fontColorInput = document.createElement("input");
+    ui.fontColorInput.type = "color";
+    ui.fontColorInput.title = "字体颜色";
+
+    ui.bgColorInput = document.createElement("input");
+    ui.bgColorInput.type = "color";
+    ui.bgColorInput.title = "背景色";
+
+    [ui.fontColorInput, ui.bgColorInput].forEach(function (input) {
+      Object.assign(input.style, {
+        width: "22px",
+        height: "20px",
+        padding: "0",
+        border: "none",
+        background: "transparent",
+        cursor: "pointer",
+      });
+    });
+
+    ui.bgTransparentCheckbox = document.createElement("input");
+    ui.bgTransparentCheckbox.type = "checkbox";
+    ui.bgTransparentCheckbox.title = "透明背景";
+
+    ui.configRow.appendChild(buildConfigLabel("字号", ui.fontSizeInput));
+    ui.configRow.appendChild(buildConfigLabel("文字", ui.fontColorInput));
+    ui.configRow.appendChild(buildConfigLabel("背景", ui.bgColorInput));
+    ui.configRow.appendChild(
+      buildConfigLabel("透明", ui.bgTransparentCheckbox),
+    );
+
+    ui.btnRow = document.createElement("div");
+    Object.assign(ui.btnRow.style, {
+      display: "none",
+      alignSelf: "stretch",
+      justifyContent: "flex-end",
+      gap: "14px",
+      marginTop: "6px",
+    });
+
+    ui.confirmBtn = document.createElement("button");
+    ui.confirmBtn.textContent = "确定";
+    ui.cancelBtn = document.createElement("button");
+    ui.cancelBtn.textContent = "取消";
+    [ui.confirmBtn, ui.cancelBtn].forEach(function (btn) {
+      Object.assign(btn.style, {
+        fontSize: "14px",
+        padding: "2px 14px",
+        cursor: "pointer",
+        borderRadius: "4px",
+        border: "1px solid rgba(0, 0, 0, 0.35)",
+        background: "transparent",
+        color: "#000000",
+      });
+    });
+    ui.confirmBtn.style.borderColor = "#3b82f6";
+    ui.confirmBtn.style.color = "#3b82f6";
+
+    ui.btnRow.appendChild(ui.confirmBtn);
+    ui.btnRow.appendChild(ui.cancelBtn);
+
+    box.appendChild(topRow);
+    box.appendChild(ui.configRow);
+    box.appendChild(ui.btnRow);
+    box._ui = ui;
+
+    box.addEventListener("dblclick", function (e) {
+      e.stopPropagation();
+      enterSubEditMode(box, sub, index);
+    });
+
+    // 编辑态仅通过确定/取消按钮或 Enter/Esc 结束（与主浮框一致）
+    box.addEventListener("keydown", function (e) {
+      if (!subEdit || subEdit.box !== box) return;
+      if (e.target.tagName === "BUTTON") return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        exitSubEditMode(true);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        exitSubEditMode(false);
+      }
+    });
+
+    ui.confirmBtn.addEventListener("click", function () {
+      exitSubEditMode(true);
+    });
+    ui.cancelBtn.addEventListener("click", function () {
+      exitSubEditMode(false);
+    });
+
+    // 点击配置行的标签/空白区域时保持当前焦点，避免误退出编辑态
+    ui.configRow.addEventListener("mousedown", function (e) {
+      if (e.target.tagName !== "INPUT") {
+        e.preventDefault();
+      }
+    });
+
+    ui.dragHandle.addEventListener("mousedown", function (e) {
+      if (!subEdit || subEdit.box !== box) return;
+      // 阻止默认焦点转移，避免输入框失焦导致拖拽中断
+      e.preventDefault();
+      subDrag = {
+        box: box,
+        startX: e.clientX,
+        startY: e.clientY,
+        initialLeft: box.offsetLeft,
+        initialTop: box.offsetTop,
+      };
+    });
+
+    // 样式配置即时预览：只改 DOM，确定时才随文案/位置一并落库
+    ui.fontSizeInput.addEventListener("input", function () {
+      const size = parseInt(ui.fontSizeInput.value, 10);
+      if (isNaN(size)) return;
+      applySubBoxStyle(box, {
+        fontSize: Math.min(48, Math.max(10, size)),
+      });
+    });
+    ui.fontColorInput.addEventListener("input", function () {
+      applySubBoxStyle(box, { color: ui.fontColorInput.value });
+    });
+    ui.bgColorInput.addEventListener("input", function () {
+      applySubBoxStyle(box, { bgColor: ui.bgColorInput.value });
+    });
+    ui.bgTransparentCheckbox.addEventListener("change", function () {
+      ui.bgColorInput.disabled = ui.bgTransparentCheckbox.checked;
+      applySubBoxStyle(box, {
+        bgColor: ui.bgTransparentCheckbox.checked ? "" : ui.bgColorInput.value,
+      });
+    });
+
     document.body.appendChild(box);
     subRuleBoxes.set(sub, box);
     return box;
+  }
+
+  // 将样式字段应用到子浮框（展示渲染与编辑预览共用）；bgColor 为空字符串表示透明背景
+  function applySubBoxStyle(box, style) {
+    const ui = box._ui;
+    if (style.fontSize !== undefined) {
+      ui.textSpan.style.fontSize = style.fontSize + "px";
+      ui.textInput.style.fontSize = style.fontSize + "px";
+    }
+    if (style.color !== undefined) {
+      box.style.color = style.color;
+      ui.textInput.style.color = style.color;
+    }
+    if (style.bgColor !== undefined) {
+      box.style.backgroundColor = style.bgColor || "transparent";
+    }
+  }
+
+  // 进入子浮框编辑态：与主浮框一致——拖拽手柄/输入框/样式配置行/确定取消按钮，
+  // 编辑态下拖手柄调整位置；复用 isEditMode 冻结 updateDisplay/evaluateSubRules/
+  // 快捷键，防止编辑期间被重渲染打断
+  function enterSubEditMode(box, sub, index) {
+    if (isEditMode) return; // 主浮框或其他子浮框编辑中
+    isEditMode = true;
+    const ui = box._ui;
+    subEdit = { box: box, sub: sub, index: index, ui: ui };
+
+    box.style.borderColor = "#3b82f6";
+
+    // 同步样式配置控件的当前值（子规则未设置时取默认样式）
+    const fontSize = sub.fontSize || DEFAULT_STYLE.fontSize;
+    const color = sub.color || DEFAULT_STYLE.color;
+    const bgColor =
+      typeof sub.bgColor === "string" ? sub.bgColor : DEFAULT_STYLE.bgColor;
+    ui.fontSizeInput.value = fontSize;
+    ui.fontColorInput.value = color;
+    ui.bgColorInput.value = bgColor || "#ffffff";
+    ui.bgColorInput.disabled = !bgColor;
+    ui.bgTransparentCheckbox.checked = !bgColor;
+
+    ui.dragHandle.style.display = "inline-flex";
+    ui.configRow.style.display = "flex";
+    ui.btnRow.style.display = "flex";
+    ui.textInput.value = ui.textSpan.innerText;
+    // 输入框宽度跟随文字实际渲染宽度（最小 140px），避免长文字被截断
+    ui.textInput.style.width =
+      Math.max(140, ui.textSpan.offsetWidth + 24) + "px";
+    ui.textSpan.style.display = "none";
+    ui.textInput.style.display = "inline-block";
+
+    ui.textInput.focus();
+    ui.textInput.select();
+  }
+
+  // 退出子浮框编辑态：save 时把文案/位置/样式写入 storage（确定/Enter），
+  // 否则放弃改动（取消/Esc），最后按生效规则重渲染
+  function exitSubEditMode(save) {
+    if (!subEdit) return;
+    const ctx = subEdit;
+    const ui = ctx.ui;
+    subEdit = null;
+    subDrag = null;
+    isEditMode = false;
+
+    // 先切回展示态控件布局，文案/位置/样式由下方重渲染按生效规则重置
+    ctx.box.style.borderColor = "transparent";
+    ui.dragHandle.style.display = "none";
+    ui.configRow.style.display = "none";
+    ui.btnRow.style.display = "none";
+    ui.textSpan.style.display = "inline";
+    ui.textInput.style.display = "none";
+
+    if (save) {
+      const patch = {};
+      const newText = ui.textInput.value.trim();
+      if (newText) patch.text = newText;
+      const size = parseInt(ui.fontSizeInput.value, 10);
+      if (!isNaN(size)) patch.fontSize = Math.min(48, Math.max(10, size));
+      patch.color = ui.fontColorInput.value;
+      patch.bgColor = ui.bgTransparentCheckbox.checked
+        ? ""
+        : ui.bgColorInput.value;
+      // 位置：保持原子规则的锚定方向（right/bottom 锚定的随窗口尺寸自适应）
+      if (parsePosValue(ctx.sub.right) !== undefined) {
+        patch.right = Math.max(
+          0,
+          window.innerWidth - ctx.box.offsetLeft - ctx.box.offsetWidth,
+        );
+        patch.left = undefined;
+      } else {
+        patch.left = ctx.box.offsetLeft;
+        patch.right = undefined;
+      }
+      if (parsePosValue(ctx.sub.bottom) !== undefined) {
+        patch.bottom = Math.max(
+          0,
+          window.innerHeight - ctx.box.offsetTop - ctx.box.offsetHeight,
+        );
+        patch.top = undefined;
+      } else {
+        patch.top = ctx.box.offsetTop;
+        patch.bottom = undefined;
+      }
+      persistSubRulePatch(ctx.index, patch);
+    }
+    // 重渲染：保存时按合并后的生效规则显示新值；取消时还原文案/位置/样式
+    updateDisplay();
+  }
+
+  // 将子规则的修改持久化到 storage：整条 rules 数组落库（listen 函数序列化为
+  // 字符串），与 getEffectiveRulesMap 的覆盖校验兼容（只接受 listen 齐全的 rules）
+  function persistSubRulePatch(index, patch) {
+    if (!activeRule || !Array.isArray(activeRule.rules)) return;
+    const stored = getStoredData();
+    const entry = ensureStoredEntry(stored, activePattern);
+    if (!entry) return;
+    entry.rules = activeRule.rules.map(function (s, i) {
+      const copy = Object.assign({}, s);
+      if (typeof copy.listen === "function") {
+        copy.listen = copy.listen.toString();
+      }
+      if (i === index) {
+        Object.keys(patch).forEach(function (k) {
+          if (patch[k] === undefined) delete copy[k];
+          else copy[k] = patch[k];
+        });
+      }
+      return copy;
+    });
+    saveStoredData(stored);
   }
 
   function hideAllSubRuleBoxes() {
@@ -1051,11 +1393,19 @@
 
       if (ok) {
         const box = createSubRuleBox(sub, i);
-        box.textContent = sub.text || "";
+        box._ui.textSpan.innerText = sub.text || "";
         box.style.zIndex =
           sub.zIndex !== undefined ? String(sub.zIndex) : DEFAULT_Z_INDEX;
+        applySubBoxStyle(box, {
+          fontSize: sub.fontSize || DEFAULT_STYLE.fontSize,
+          color: sub.color || DEFAULT_STYLE.color,
+          bgColor:
+            typeof sub.bgColor === "string"
+              ? sub.bgColor
+              : DEFAULT_STYLE.bgColor,
+        });
         applyPositionTo(box, sub);
-        box.style.display = "block";
+        box.style.display = "flex";
       } else {
         const box = subRuleBoxes.get(sub);
         if (box) box.style.display = "none";
@@ -1262,6 +1612,33 @@
       }
     });
 
+    // 子浮框拖拽：编辑态下直接拖动浮框调整位置，Enter 保存时随文案一并落库
+    document.addEventListener("mousemove", function (e) {
+      if (!subDrag) return;
+      const box = subDrag.box;
+      const dx = e.clientX - subDrag.startX;
+      const dy = e.clientY - subDrag.startY;
+      const newLeft = Math.max(
+        0,
+        Math.min(window.innerWidth - box.offsetWidth, subDrag.initialLeft + dx),
+      );
+      const newTop = Math.max(
+        0,
+        Math.min(
+          window.innerHeight - box.offsetHeight,
+          subDrag.initialTop + dy,
+        ),
+      );
+      box.style.right = "auto";
+      box.style.bottom = "auto";
+      box.style.left = newLeft + "px";
+      box.style.top = newTop + "px";
+    });
+
+    document.addEventListener("mouseup", function () {
+      subDrag = null;
+    });
+
     // 捕获阶段监听：防止页面脚本 stopPropagation 吞掉快捷键（部分 Windows 环境常见）
     document.addEventListener(
       "keydown",
@@ -1450,9 +1827,27 @@
   let domObserver = null;
   let evalScheduled = false;
 
+  // 判断 mutation 是否源自脚本自身的浮框（主浮框/子规则浮框）。
+  // evaluateSubRules 写入浮框 textContent/style 会产生 mutation，
+  // 若不过滤会触发“评估 → 写入 → 再评估”的自激循环（浮框 style 被反复重写）
+  function isOwnFloatingNode(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (container && container.contains(node)) return true;
+    let inside = false;
+    subRuleBoxes.forEach(function (box) {
+      if (box.contains(node)) inside = true;
+    });
+    return inside;
+  }
+
   function startDomListener() {
     if (domObserver) return;
-    domObserver = new MutationObserver(function () {
+    domObserver = new MutationObserver(function (mutations) {
+      // 全部 mutation 都来自自身浮框时跳过，打断自激循环
+      const onlyOwn = mutations.every(function (m) {
+        return isOwnFloatingNode(m.target);
+      });
+      if (onlyOwn) return;
       // 高频 mutation 合并为防抖评估，避免监听函数被频繁执行
       if (evalScheduled) return;
       evalScheduled = true;
