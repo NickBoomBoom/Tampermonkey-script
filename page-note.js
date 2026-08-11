@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         页面路由悬浮文本管理器
 // @namespace    http://tampermonkey.net/
-// @version      3.6
+// @version      3.7
 // @description  SPA 路由感知悬浮文字，支持预设/自定义正则匹配，双击编辑拖拽并可配置字号/文字/背景色，确定/取消按钮退出编辑，LocalStorage 存储；可通过快捷键 Ctrl+Alt+F 或油猴脚本菜单为当前页面添加悬浮文本。
 // @author       You
 // @match        *://*/*
+// @run-at       document-idle
 // @grant        GM_registerMenuCommand
 // ==/UserScript==
 
@@ -1261,25 +1262,30 @@
       }
     });
 
-    document.addEventListener("keydown", function (e) {
-      if (
-        e.ctrlKey === SHORTCUT_KEY.ctrlKey &&
-        e.altKey === SHORTCUT_KEY.altKey &&
-        e.code === SHORTCUT_KEY.code
-      ) {
-        // 编辑态或焦点在输入类元素时不触发，避免影响页面输入
-        const target = e.target;
-        const isEditable =
-          target &&
-          (target.tagName === "INPUT" ||
-            target.tagName === "TEXTAREA" ||
-            target.isContentEditable);
-        if (isEditMode || isEditable) return;
+    // 捕获阶段监听：防止页面脚本 stopPropagation 吞掉快捷键（部分 Windows 环境常见）
+    document.addEventListener(
+      "keydown",
+      function (e) {
+        if (
+          e.ctrlKey === SHORTCUT_KEY.ctrlKey &&
+          e.altKey === SHORTCUT_KEY.altKey &&
+          e.code === SHORTCUT_KEY.code
+        ) {
+          // 编辑态或焦点在输入类元素时不触发，避免影响页面输入
+          const target = e.target;
+          const isEditable =
+            target &&
+            (target.tagName === "INPUT" ||
+              target.tagName === "TEXTAREA" ||
+              target.isContentEditable);
+          if (isEditMode || isEditable) return;
 
-        e.preventDefault();
-        addFloatingTextForCurrentPage();
-      }
-    });
+          e.preventDefault();
+          addFloatingTextForCurrentPage();
+        }
+      },
+      true,
+    );
   }
 
   // =========================================================================
@@ -1486,9 +1492,37 @@
     window.addEventListener("hashchange", updateDisplay);
   }
 
-  migrateLegacyStorage();
-  createUI();
-  registerMenuCommands();
-  listenSPAUrlChange();
-  updateDisplay();
+  let initialized = false;
+
+  function init() {
+    if (initialized) return;
+    initialized = true;
+    migrateLegacyStorage();
+    createUI();
+    registerMenuCommands();
+    listenSPAUrlChange();
+    updateDisplay();
+  }
+
+  // 启动兜底：document.body 未就绪时等待其出现再初始化，
+  // 否则 createUI/startDomListener 会因 body 为 null 抛错导致整个脚本失效
+  // （Windows 上页面加载较慢或注入时机偏早时容易出现）
+  function boot() {
+    if (document.body) {
+      init();
+      return;
+    }
+    const timer = setInterval(function () {
+      if (document.body) {
+        clearInterval(timer);
+        init();
+      }
+    }, 50);
+    // 兜底超时，避免极端页面下无限轮询
+    setTimeout(function () {
+      clearInterval(timer);
+    }, 30000);
+  }
+
+  boot();
 })();
